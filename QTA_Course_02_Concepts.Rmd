@@ -1,0 +1,327 @@
+---
+title: "QTA with R: Context and Basic Concepts of QTA"
+author: "Julian Bernauer"
+date: "18 February 2019"
+output: 
+  ioslides_presentation:
+    incremental: false
+    widescreen: false 
+    smaller: false 
+---
+
+```{r "knitr config", cache = FALSE, include=FALSE}
+require("knitr")
+opts_knit$set(root.dir = "C:/DRJB/QTA Kurs CDSS/")
+```
+
+
+## agenda - context and concepts in qta 
+
+1. Warm-up / leftovers on readtext()
+2. (Some) state of the art and concepts of QTA: examples from political science, informatics and computer linguistics 
+3. Digitalization and "Big Data"
+4. Ethics in text analysis   
+5. Ways of approaching text as data: CMP coding exercise 
+
+
+# warm-up
+
+## warm-up / leftovers on readtext()
+- It can read in different file formats (txt, csv, json, pdf, docx...) and encodings (UTF-8, UTF-8-BOM, UTF-16-...)
+- See this excellent [vignette](https://cran.r-project.org/web/packages/readtext/vignettes/readtext_vignette.html)
+- btw: "readtext was originally developed in early versions of the quanteda package for the quantitative analysis of textual data."
+
+*warm-up*
+
+- Using pdf's from polidoc.net / 2017 Bundestag election -> please download and save 
+- We also systematically read document-level variables from the filenames
+- And specify that we only want to read pdfs
+
+-> We will talk about encodings and cleaning text 
+
+
+## warm-up / leftovers on readtext()
+
+```{r readtext, eval=TRUE, echo=TRUE}
+library(readtext)
+df_btw17_pdf <- readtext("C:/DRJB/QTA Kurs CDSS/data/btw2017pdf/*.pdf",  
+                     docvarsfrom = "filenames",
+                     docvarnames = c("polidoc_id", "year"),
+                     sep = "_")
+head(df_btw17_pdf)
+```
+
+
+## warm-up / leftovers on readtext()
+*Exercise*
+
+Add a document-level variable "party" generated via the filenames 
+
+
+## remark on txt vs pdf
+- Reading in pdfs takes longer
+- polidoc.net: txt is cleaned: removal of page numbers, headers, footnotes, donation and membership calls as well as indexes and registers, keeping titles and foreword
+- pdf contains all of this, and additional errors could be added, e.g. leftovers from pictures... 
+
+-> take a look at the pdf for *Die Linke*
+
+-> What is excluded at this stage is a consequential decision 
+
+
+# context and concepts in QTA 
+
+
+## history 
+
+![Nobody expects the Spanish Inquisition](C:/DRJB/QTA Kurs CDSS/pics/inquisition.jpg)
+
+
+## history and context 
+*See Ignatow and Mihalcea (2017, Ch. 1)*
+
+- 1200s: several hundred monks generating cross-listing of terms in the bible 
+- Medieval ages: catholic inquisition browsing newspapers for heresy (and acting accordingly) 
+- More recent political science examples: topics in US newspapers, Comparative Manifesto Project (CMP) handcoding scores of manifestos 
+- Commercial hit: quantitative, computerized text mining looking for consumer sentiment, placement of ads in response to searches or e-mail text... 
+
+-> The picture was me and my friends handcoding after the CMP sheme
+
+
+## (some) state of the art 
+- Political science: Grimmer and Stewart (2013) for one good overview
+- There is also a tradition in computer linguistics: example of [Gold et al. (2017)](https://academic.oup.com/dsh/article/32/1/141/2957350)
+- Informatics is strong in the more technical side and Python implementations e.g. of natural language processing tools: example of [Glavas et al. (2017)](https://ub-madoc.bib.uni-mannheim.de/42002/1/E17-2109.pdf)
+
+
+## grimmer and stewart (2013) - four principles 
+
+1. All models of language are wrong, but some are more useful than others -> unclear data generation process 
+2. QTA augments humans -> we should still read 
+3. The "best" QTA method depends on the research question -> positions of actors, language used by groups... 
+4. Validate, validate, validate -> replication of human coding... 
+
+
+## grimmer and stewart (2013)
+
+![Text as Data Methods](C:/DRJB/QTA Kurs CDSS/pics/grim_stew.png)
+
+
+## supervision, classification and scaling 
+
+```{r sup_tab, echo=FALSE, results='asis'}
+row2 <- c("Supervised","Naive Bayes","Wordscores")
+row3 <- c("Unsupervised","LDA","Wordfish")
+suptab <- as.data.frame(rbind(row2,row3))
+rownames(suptab) <- NULL
+library(knitr)
+kable(suptab, caption = "Combining supervision and analytical goals", col.names=c("","Classification","Scaling"))
+```
+
+
+## supervision, classification and scaling 
+- *Naives Bayes*: predicts categories from features relying on a training set, around for a while, computationally efficient and often not bad, assumes independence of words 
+- *Wordscores*: requires known positions of some texts to calculate the positions of others from word weights derived 
+- *Latent Dirichlet Allocation (LDA)*: given a fixed number of topics, words reflect topics to a certain degree, and texts reflect topics to a certain degree 
+- *Wordfish*: only requires relative positions of two texts, other positions are inferred from word distributions 
+
+
+## bag-of-words and position 
+- Bag-of-words: assumes that distributions of single words (or other features) shape text positions or classes 
+- Positional approaches emphasise semantics 
+
+-> Strong assumption and simplification 
+
+-> Often, bag-of-words does a good job (Grimmer and Stewart 2013: 272)
+
+-> Sometimes, we can add mileage by adding the context of words/retaining information about their position 
+
+-> But remember, all QTA models of language are incorrect 
+
+
+## informatics: glavas et al. (2017)
+
+![Federico Nanni and colleagues improving the scaling of EUP speeches using word embeddings](C:/DRJB/QTA Kurs CDSS/pics/fede.png)
+
+
+## beyond bag-of-words 
+- Natural Language Processing (NLP): programming computers to process natural language, e.g. aiming at machine translation or speech recognition 
+- Example of Glavas et al. (2017): cross-lingual word embeddings 
+- Definition: Word embeddings are vector representations of words in their context aimed at predicting the neighbors of a word. (Mikolov et al. 2013: 1)
+- Turns word into high-dimensional vector spaces 
+- This allows for the assessment of semantic similarity between texts, facilitating machinge translation or scaling  
+- Embeddings are trained on the whole text of Wikipedia 
+
+
+## word embeddings, cross-lingual 
+
+![Cross-lingual word embeddings (Mikolov et al. 2013)](C:/DRJB/QTA Kurs CDSS/pics/mikolov.jpg)
+
+
+## more on cross-lingual analysis 
+- [DeepL translator](https://www.deepl.com/translator) is a national champion for its machine translation algorithms and performs surprisingly well -> uses similar technology as cross-lingual word embeddings 
+- Google Translate has improved vastly due to the use of tools of such better algorithms 
+- [*Lucas et al. (2015, Political Analysis)*](https://www.cambridge.org/core/journals/political-analysis/article/computerassisted-text-analysis-for-comparative-politics/CC8B2CF63A8CC36FE00A13F9839F92BB): overview and topic model on machine-translated social media in English and Chinese   
+- Bag-of-words does not need perfect translation, just of the right key terms (Lucas et al. 2015: 260)
+- [*De Vries et al. (2018, Political Analysis)*](https://www.cambridge.org/core/journals/political-analysis/article/no-longer-lost-in-translation-evidence-that-google-translate-works-for-comparative-bagofwords-text-applications/43CB03805973BB8AD567F7AE50E72CA6): show that Google Translate to unify text in English works at both the DFM and topic model result level using speeches in the European Parliament 
+
+
+## computer linguistics: gold et al. (2017)
+- Computer linguistics / interdisciplinary - a former colleague with the beautiful name Valentin Gold
+- "Visual Analytics" of speech acts in the Stuttgart 21 arbitration, looking for deliberation 
+- Manual annotation of part-of-speech (POS) tags (noting morpho-syntactic categories such as nouns, verbs, or adjectives) and kind of statement (participation, justification, respect...)
+- Topics retrieved usig [MALLET](http://mallet.cs.umass.edu/), "a Java-based package for statistical natural language processing, document classification, clustering, topic modeling, information extraction, and other machine learning applications to text."
+- Visualisation of distribution of participation across topics, topics across time, levels of deliberation across participants
+
+
+## gold et al. (2017)
+
+![Topics over time [(Gold et al. 2017)](https://academic.oup.com/dsh/article/32/1/141/2957350)](C:/DRJB/QTA Kurs CDSS/pics/gold.png)
+
+
+## wait a minute 
+- Which concepts do you think are also crucial to understand for quantitative text analysis? 
+- Any other concepts you like to talk about? 
+
+
+# "big data" 
+
+
+## big data? bigger data? data! 
+Excellent read: [Munzert (2014, *Zeitschrift für Politikwissenschaft*)](https://www.nomos-elibrary.de/10.5771/1430-6387-2014-1-2-205/big-data-in-der-forschung-big-data-in-der-lehre-ein-vorschlag-zur-erweiterung-der-bestehenden-methodenausbildung-jahrgang-24-2014-heft-1-2) 
+
+*defining big data*
+
+- No clear threshold in terms of GB 
+- Informal definition: Too much to handle for conventional methods 
+- Driven by: volume, velocity, variety, vinculation and validity  
+
+
+## volume
+- E.g. several thousand Tweets per second... 
+- More than your computer can handle 
+
+
+## velocity 
+- Speed of data retrieval, often real-time 
+- Compare social media to a one-time survey!
+- Real-time data e.g. useful to detect censorship in social media 
+
+
+## vinculation 
+- *Verknüpfung* -> rare word vinculation probably used as it starts with a "v" ;) 
+- Example of Twitter: allows to infer networks, see [R package igraph](https://cran.r-project.org/web/packages/igraph/index.html)  
+
+
+## validity 
+- Big data not necessarily better data
+- Causal inference also a topic for big data/textual analysis 
+- Selection bias, confounders... 
+- Representativeness of Twitter data? 
+
+-> Validation is key for QTA 
+
+-> We will talk about validation strategiesin more detail, relying on face, convergent and construct validity   
+
+
+## what is needed to analyse big data?
+- Web technology (HTTP, HTML, JSON...)
+- Relational databases (mySQL)
+- Machine learning (classification, scaling...) -> btw located somewhere between text mining and artificial intelligence - Programming skills (R, Python...)
+
+
+## some hacks to improve speed by programming, computer settings... 
+- Vectorize (no loops) when writing code 
+- Parallel processing on the computer, R package lapply to split problems 
+- Settings of computer: alternative to basic linear algebra system (BLAS) 
+- Cluster or cloud computing, e.g. [high performance computing service](https://www.uni-mannheim.de/infos-fuer/forschende-und-lehrende/forschen/high-performance-computing-hpc/) at the University of Mannheim 
+
+*Tipps taken from Fabian Scheipl's (LMU) course on R programming at the MZES in December 2018*
+
+*See also the open source book ["Efficient R Programming"](https://csgillespie.github.io/efficientR/)*
+
+
+# ways of approaching textual data: CMP codig exercise 
+
+## exercise: manual CMP coding of manifesto snippet
+- So that we know why we do this (spoiler: because we are lazy ;) 
+- Comparison of categories 
+- See [CMP codebook](https://manifestoproject.wzb.eu/down/documentation/codebook_MPDataset_MPDS2015a.pdf) for the 56 categories 
+- Example: "per108 - European Union positive"" 
+- Code the "quasi-sentences" in the paragraph of the 2017 Green and AfD manifestos shown on the next slides 
+
+-> See [GitHub](https://github.com/julianbernauer/QTA_R_course/blob/master/cmp_coding.csv) for the start of a data frame 
+
+
+## green 2017 text snippet 
+
+Demokratie stärken durch mehr Transparenz und Beteiligung - Demokratie lebt vom Vertrauen der BürgerInnen in ihre RepräsentantInnen, in ihre Institutionen und Entscheidungsprozesse. Mit großer Sorge sehen wir GRÜNE, dass dieses Vertrauen in Deutschland und Europa geringer wird. Wir wollen deshalb die Demokratie stärken - auch indem wir für mehr Transparenz und bessere Beteiligung sorgen. Das Parlament ist für uns als zentrale Vertretung der BürgerInnen Deutschlands die Herzkammer unserer Demokratie.
+
+
+##  afd 2017 text snippet 
+
+Verteidigung der Demokratie in Deutschland - Ohne Volkssouveränität keine Demokratie. Wir wollen Deutschland reformieren und an die Prinzipien und Wurzeln anknüpfen, die zu seinem jahrzehntelangen sozialen, wirtschaftlichen und gesellschaftlichen Erfolg geführt haben. Die Rechtsstaatlichkeit muss wiederhergestellt werden, und der Staat muss seine eigentlichen Kernaufgaben, insbesondere die Gewährleistung der inneren Sicherheit, wieder wahrnehmen. Mit den Verträgen von Schengen, Maastricht und Lissabon wurde rechtswidrig in die unantastbare Volkssouveränität eingegriffen. Ein Staat, der das Grenzregime und damit die Hoheit über sein Staatsgebiet aufgibt, löst sich auf. Er verliert seine Eigenstaatlichkeit.
+
+
+## quick validity and reliability check 
+- Was it easy to discern all quasi-sentences?
+- Was it reasonably clear to code 
+- Did all quasi-sentences fit a given category? 
+
+
+## homework
+
+- Please insert your coding ("per108"...) at [GitHub](https://github.com/julianbernauer/QTA_R_course/blob/master/cmp_coding.csv) for reliability testing 
+- Insert some coder id (e.g. "jb4") 
+
+```{r cmp, eval=TRUE, echo=TRUE}
+cmp_coding <- read.csv(url("https://raw.githubusercontent.com/julianbernauer/QTA_R_course/master/cmp_coding.csv"), encoding="UTF-8")
+cmp_coding$cmp_category[cmp_coding$party=="afd" & cmp_coding$quasi_sentence=="Ohne Volkssouveränität keine Demokratie."]
+```
+
+
+# ethics in text analysis 
+
+## ethics in text analysis 
+*See Igantow and Mihalcea (2017, Ch. 1)*
+
+- User consent for social media data (Tweets...)? 
+- Webscraping creating heavy traffic on webservers? 
+- Privacy: do users assume a private or public environment? 
+- Anonymity: a must, except for public figures?!   
+- Copyright: might be an issue  
+- Hacking: see you in court, depending on motivation (theft, political, mixed...)  
+
+-> Research Ethics Advisory Boards, at the [University of Mannheim](https://www2.uni-mannheim.de/forum/schwerpunkt/ausgabe_2_2011_wertvorstellungen/ethische_selbstkontrolle/)
+
+-> Legal requirements/practice?! 
+
+-> What do you know? 
+
+-> What do you think? 
+
+
+## literature
+- (Chapter Stub 1 from "QTA with R") -> to be delivered (*sigh*)
+- Chapter 1 of Silge and Robinson (2017) 
+- Grimmer, Justin, and Brandon M. Stewart (2013) Text as Data: The Promise and Pitfalls of Automatic Content Analysis Methods for Political Texts. *Political Analysis* 21(3): 267-97.
+- Lucas, Christopher, Richard A. Nielsen, Margaret E. Roberts, Brandon M. Stewart, Alex Storer, and Dustin Tingley (2015) Computer-Assisted Text Analysis for Comparative Politics. *Political Analysis* 23 (2): 254-77.
+
+
+## some classic books on content analysis 
+- Neuendorf, Kimberly A. (2002): The Content Analysis Guidebook. SAGE.
+- Krippendorff, Klaus (2013): Content Analysis. An Introduction to its Methodology (Third Edition). SAGE. 
+- Further political science review article: [Wilkerson and Casas (2017, ARPS)](https://www.annualreviews.org/doi/full/10.1146/annurev-polisci-052615-025542)
+
+
+## that's all folks 
+
+THANK YOU!
+
+*Contact Julian Bernauer*
+
+- Postdoctoral Fellow, MZES, Data and Methods Unit
+- julian.bernauer@mzes.uni-mannheim.de
+- [julianbernauer.github.io](https:/julianbernauer.github.io)
+- +49 621 181 2853
+
+
