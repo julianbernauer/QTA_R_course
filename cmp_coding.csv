@@ -1,15 +1,15 @@
-party,quasi_sentence,cmp_category,coder_id
-afd,"Verteidigung der Demokratie in Deutschland -",per202,aa 
-afd,"Ohne Volkssouveränität keine Demokratie.",per202,aa 
-afd,"Wir wollen Deutschland reformieren und an die Prinzipien und Wurzeln anknüpfen, die zu seinem jahrzehntelangen sozialen, wirtschaftlichen und gesellschaftlichen Erfolg geführt haben.",per204,aa
-afd,"Die Rechtsstaatlichkeit muss wiederhergestellt werden,",per605,aa
-afd,"und der Staat muss seine eigentlichen Kernaufgaben, insbesondere die Gewährleistung der inneren Sicherheit, wieder wahrnehmen.",per605,aa
-afd,"Mit den Verträgen von Schengen, Maastricht und Lissabon wurde rechtswidrig in die unantastbare Volkssouveränität eingegriffen.",per110,aa
-afd,"Ein Staat, der das Grenzregime und damit die Hoheit über sein Staatsgebiet aufgibt, löst sich auf.",per110,aa
-afd,"Er verliert seine Eigenstaatlichkeit.",per110,aa
-green,"Demokratie stärken durch mehr Transparenz und Beteiligung -",per202,aa
-green,"Demokratie lebt vom Vertrauen der BürgerInnen in ihre RepräsentantInnen, in ihre Institutionen und Entscheidungsprozesse.",per202,aa
-green,"Mit großer Sorge sehen wir GRÜNE, dass dieses Vertrauen in Deutschland und Europa geringer wird.",.,aa
-green,"Wir wollen deshalb die Demokratie stärken –",per202,aa
-green,"auch indem wir für mehr Transparenz und bessere Beteiligung sorgen.",.,aa
-green,"Das Parlament ist für uns als zentrale Vertretung der BürgerInnen Deutschlands die Herzkammer unserer Demokratie.",per202,aa
+party,quasi_sentence,cmp_category,coder_id,cmp_category_cm,cmp_category_dh
+afd,"Verteidigung der Demokratie in Deutschland -",per202,aa,per202,per202
+afd,"Ohne Volkssouveränität keine Demokratie.",per202,aa,per1032,per201 
+afd,"Wir wollen Deutschland reformieren und an die Prinzipien und Wurzeln anknüpfen, die zu seinem jahrzehntelangen sozialen, wirtschaftlichen und gesellschaftlichen Erfolg geführt haben.",per204,aa,per601,per303
+afd,"Die Rechtsstaatlichkeit muss wiederhergestellt werden,",per605,aa,per202,per605
+afd,"und der Staat muss seine eigentlichen Kernaufgaben, insbesondere die Gewährleistung der inneren Sicherheit, wieder wahrnehmen.",per605,aa,per605_1,per605
+afd,"Mit den Verträgen von Schengen, Maastricht und Lissabon wurde rechtswidrig in die unantastbare Volkssouveränität eingegriffen.",per110,aa,per109,per109
+afd,"Ein Staat, der das Grenzregime und damit die Hoheit über sein Staatsgebiet aufgibt, löst sich auf.",per110,aa,per104,per104
+afd,"Er verliert seine Eigenstaatlichkeit.",per110,aa,per1032,per601
+green,"Demokratie stärken durch mehr Transparenz und Beteiligung -",per202,aa,per202_1,per202
+green,"Demokratie lebt vom Vertrauen der BürgerInnen in ihre RepräsentantInnen, in ihre Institutionen und Entscheidungsprozesse.",per202,aa,per202,per202
+green,"Mit großer Sorge sehen wir GRÜNE, dass dieses Vertrauen in Deutschland und Europa geringer wird.",.,aa,per108,per108
+green,"Wir wollen deshalb die Demokratie stärken –",per202,aa,per202,per202
+green,"auch indem wir für mehr Transparenz und bessere Beteiligung sorgen.",.,aa,per202,per202
+green,"Das Parlament ist für uns als zentrale Vertretung der BürgerInnen Deutschlands die Herzkammer unserer Demokratie.",per202,aa,per202,per202
