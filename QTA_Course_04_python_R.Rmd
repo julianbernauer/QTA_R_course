@@ -1,0 +1,258 @@
+---
+title: "QTA with R: Python in R"
+author: "Julian Bernauer"
+date: "04 March 2019"
+output: 
+  ioslides_presentation:
+    incremental: false
+    widescreen: false 
+    smaller: false 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Agenda
+
+1. Python and R
+2. Python from R in detail: `reticulate()`
+3. A glimpse at other R packages 
+4. Walking through some code 
+5. Exercise: https://raw.githubusercontent.com/julianbernauer/QTA_R_course/master/python_exercise_R" 
+6. Analysis of cmp coding exercise 
+
+
+# 1. Python and R 
+
+
+## Guido van Rossum 
+
+![Guido van Rossum, "Benevolent dictator for life" (BDFL) of Python between 1991-2018 (so not for life)](M:/QTA Kurs CDSS/pics/guido.jpg)
+
+
+## R/Python [Comparison Data Camp](https://www.datacamp.com/community/tutorials/r-or-python-for-data-analysis)
+
+| Criterion | R | Python |
+|-----------|-----------| ----------- |
+|Age|1995|1991|
+|Origin|Statistics/Data Science|Engineering/Developing|
+|Learning curve| Ok | "Suitable for beginners" |
+|Functionality|Packages galore, easy| Modules, less/complicated|
+|Graphics| Nice things like `ggplot2` | Can be more cumbersome
+|Packages| A lot, especially for statistics | Catching up |
+|R<->Python|reticulate, rPython|RPy2|
+|Salary (2014 survey)|115k\$|94k\$|
+
+
+## Python philosophy 
+
+*See [python.org](python.org)*
+
+- Emphasises on "nice" code
+- Claims to be easy to learn
+- Python Package Index (PyPI) with thousands of third-party modules
+- Open source (as is R) 
+
+$\rightarrow$ Both are cool! 
+
+
+## Chunk of code 
+*A very simple function in Python and R code:* 
+
+```{python code_snippet_p, eval=TRUE, echo=TRUE}
+def r_vs_python():
+    print("Python is cool, R is cool")
+r_vs_python()
+```
+
+```{r code_snippet_r, eval=TRUE, echo=TRUE}
+r_py_func <- function(){
+    print("Python is cool, R is cool")
+}
+r_py_func()
+```
+
+*Not that different!* 
+
+
+# 2. Python from R 
+
+## `reticulate()`
+![Reticulated Python](M:/QTA Kurs CDSS/pics/reticulated_python.png)
+
+
+## `reticulate()`
+- Another [RStudio project](https://blog.rstudio.com/2018/03/26/reticulate-r-interface-to-python) (JJ Allaire et al.) 
+- [reticulate on GitHub](https://github.com/rstudio/reticulate)
+- From the introductory blog post: "The package enables you to reticulate Python code into R, creating a new breed of project that weaves together the two languages."  
+- "Reticulate embeds a Python session within your R session, enabling seamless, high-performance interoperability. If you are an R developer that uses Python for some of your work or a member of data science team that uses both languages, reticulate can dramatically streamline your workflow!"
+
+
+## `reticulate` ways to use Python from R
+1. R Markdown allows Python chunks (see script of slides)
+2. Python REPL (read-eval-print-loop) creates an interactive console within R 
+3. `import()` allows the use of Python module function in R 
+4. Sourcing Python scripts with `source_python()`  
+
+Example: Tweet by Barack Obama: "Zion Williamson seems like an outstanding young man as well as an outstanding basketball player. Wishing him a speedy recovery. https://twitter.com/barackobama."
+
+
+## Python from R - Markdown
+
+*Defines a Python code chunk in the background.*
+
+```{python python_markdown, eval=TRUE, echo = TRUE}
+from nltk.tokenize import word_tokenize
+obama_tweet = "Zion Williamson seems like an outstanding young man as well as an outstanding basketball player. Wishing him a speedy recovery. https://twitter.com/barackobama."
+tokens_obama = word_tokenize(obama_tweet)
+print(tokens_obama)
+```
+
+
+## Python from R - REPL 
+
+*Opens an interactive Python session from within R.*
+
+*After returning to R, access objects with "py$NAME".* 
+
+```{r python_repl, eval=FALSE, echo=TRUE, warning = FALSE}
+library(reticulate)
+repl_python()
+from nltk.tokenize import word_tokenize
+obama_tweet = "[...]"
+obama_repl = word_tokenize(obama_tweet)
+exit
+py$obama_repl
+```
+
+
+## Python from R - 'import()' 
+
+*Import Python module, access function with "NAME_MODULE$NAME_FUNCTION".*
+
+```{r python_import, eval=TRUE, echo=TRUE, warning = FALSE}
+library(reticulate)
+obama_tweet = "Zion Williamson seems like an outstanding young man as well as an outstanding basketball player. Wishing him a speedy recovery. https://twitter.com/barackobama."
+nltk.tokenize <- import("nltk.tokenize")
+obama_import <- nltk.tokenize$word_tokenize(obama_tweet)
+obama_import
+```
+
+
+## Python from R - `source()` 
+
+*Sources the code: external Python script, runs in background, results available in R.* 
+
+Script 'obama.py', saved on disk, just printed here:
+```{python python_source_py, eval=FALSE, echo=TRUE, warning = FALSE}
+from nltk.tokenize import word_tokenize
+obama_tweet = "[...]"
+obama_source = word_tokenize(obama_tweet)
+```
+
+
+## Python from R - `source()` 
+
+Sourcing:
+```{r python_source, eval=TRUE, echo=TRUE, warning = FALSE}
+library(reticulate)
+source_python("obama.py")
+```
+
+Results directly available:
+```{r python_source_object, eval=TRUE, echo=TRUE, warning = FALSE}
+obama_source
+```
+
+
+## Which one to use? 
+- Matter of taste 
+- An interactive Python session leaves Python code unchanged $\rightarrow$ I like REPL
+- Importing allows more R-like use of Python modules 
+- Source might be interesting for more massive code snippets taking care of dedicated tasks 
+- What do you think? 
+
+
+## Cautions with Python code 
+- Indentation can be annyoing 
+- Less-well integrated package manager 
+
+$\Rightarrow$ Fortunately, reticulate also allows installing Python modules in R, for example the Natural Language Toolkit (nltk): 
+
+```{r install_modules, eval=FALSE, echo=TRUE}
+library(reticulate)
+py_install("nltk")
+```
+
+
+## Alternatives for using Python 
+- [Anaconda](https://www.anaconda.com/distribution)
+- Comes with Python and Jupyter Notebook $\rightarrow$ the latter is a browser-based editor 
+- Allows downloading ~1500 Python or R packages $\rightarrow$ nice, but would be a different working environment 
+
+
+## Power of Python: modules (~packages)
+
+*A selection of natural language processing modules* 
+
+- `nltk`: natural language processing toolkit, corpora and lexcial resources (for stemming...), tokenization... $\rightarrow$ see [nltk book](https://www.nltk.org/book/)
+- `gensim`: vector space modeling and topic modeling toolkit, e.g. LDA
+- `numpy`: support for large, multi-dimensional arrays and matrices, e.g. for word embeddings 
+- `string`: common string operations, e.g. lowercasing  
+
+
+## Examples: populism word embeddings query 
+- BTW 2017 election manifestos from first session 
+- Analysis using Python from R
+- Query for similarity of sentences with "elite, volk, souveränität"
+
+$\Rightarrow$ See code "[pop_sent_course.R](https://github.com/julianbernauer/QTA_R_course/blob/master/pop_sent_course.R)" on GitHub, `reticulate` is used for a REPL session.
+
+<!-- just show, needs modules... -->
+<!-- load embeddings before... -->
+
+
+# 3.  R for QTA - other packages 
+
+## Overview
+- Welbers at al. (2017: 246): about 50 packages for QTA 
+- [Overview provided by quanteda](http://quanteda.io/articles/pkgdown/comparison.html)
+- quanteda covers almost everything 
+- But let's note a few alternatives and additions 
+
+
+## `readtext`
+- Developed in the early stages of quanteda 
+- Lone-standing package 
+- Convenient function to read in text from a variety of formats
+
+
+## `tm` 
+- An older standard in QTA for R 
+- Similar basic functionality as `quanteda`: corpus creating, stopword removal, distribution of words across documents (dtm), dictionaries...
+- They use the term "document-term matrix (dtm)", quanteda "document-feature matrix (dfm)"
+- See (vignette)[https://cran.r-project.org/web/packages/tm/vignettes/tm.pdf]
+
+
+## Other/specific tasks
+- Strings: `stringi` or `stringr` (simpler) for advanced string operations 
+- Stemming: `SnowballC` package behind both `tm` and `quanteda` $\rightarrow$ issues with German  
+- Topic models: For instance, quanteda suggests using the `topicmodels` package for LDA $\rightarrow$ easy integration with quanteda's `convert()` function
+- Natural language processing (part-of-speech (POS) tagging, named entity recognition (NER)...) in R: `coreNLP`, `spacyr` (Python, faster) or `cleanNLP` (integrates the other two)
+- A seen above, `reticulate()` opens the way to open-ended access to Python and its natural language processing and machine learning tools 
+
+
+## 4.-6. Walking through the code, exercises and CMP  
+
+[Walking through the code](https://github.com/julianbernauer/QTA_R_course/blob/master/python_R.R)
+
+[Exercise](https://github.com/julianbernauer/QTA_R_course/blob/master/python_exercise.R)
+
+[CMP coding](https://github.com/julianbernauer/QTA_R_course/blob/master/cmp_coding.R)
+
+
+## Feedback on chapter stubs 
+
+*Is welcome*
