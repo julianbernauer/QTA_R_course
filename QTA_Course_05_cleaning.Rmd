@@ -1,0 +1,513 @@
+---
+title: "QTA with R: Cleaning Text"
+author: "Julian Bernauer"
+date: "18 March 2019"
+output: 
+  ioslides_presentation:
+    incremental: false
+    widescreen: false 
+    smaller: false 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(readtext)
+library(quanteda)
+```
+
+
+## Agenda
+1. A principle for text cleaning
+2. Preprocessing: `preText` package   
+3. On encodings 
+4. Regular expressions (regex) $\rightarrow$ Example of a Brexit debate in the German Bundestag  
+5. Exercise: Filtering text from a movie script (Taxi Driver)
+
+
+# A Principle for Text Cleaning 
+
+## Philosophy 
+- Keep original text intact $\rightarrow$ Ability to "go back" 
+- Track changes to the text $\rightarrow$ Partially, quanteda memorizes changes (saves notes in corpus)
+- What to keep is an analytical decision $\rightarrow$ Applause mentioned in debates can be used to measure support 
+
+
+## Quanteda "quick start"
+
+"A corpus is designed to be a more or less static container of texts with respect to processing and analysis. This means that the texts in corpus are not designed to be changed internally through (for example) cleaning or pre-processing steps, such as stemming or removing punctuation. Rather, texts can be extracted from the corpus as part of processing, and assigned to new objects, but the idea is that the corpus will remain as an original reference copy so that other analyses - for instance those in which stems and punctuation were required, such as analyzing a reading ease index - can be performed on the same corpus."
+
+
+# Pre-processing 
+
+## preText package 
+
+[preText package Vignette](https://cran.r-project.org/web/packages/preText/vignettes/getting_started_with_preText.html)
+
+"The main functions will preprocess the input text 64-128 different ways, and then allow the user to assess how robust findings based on their theoretically preferred preprocessing specification are likely to be, using the preText procedure."
+
+(Denny and Spirling (2018), Political Analysis)[https://doi.org/10.1017/pan.2017.44]
+
+[Paper presentation on Youtube](https://www.youtube.com/watch?v=c50EkJC9Z8Y)
+
+
+## Denny and Spirling (2018)
+- preText scores: "degree to which a particular preprocessing specification is unusual compared to others"
+- Provides sort of a warning 
+- Recommend replication of analysis across all(!) possible/relevant preprocessing specifications if preprocessing affects "usualness" 
+- Main decision criterion remains theory!
+
+
+## Pre-processing considered
+1) P: punctuation (hashtags?)
+2) N: numbers (may be informative)
+3) L: lowercasing (can be misleading) 
+4) S: stemming (can often be lisleading)
+5) W: stopword removal (alternative lists)
+6) N: n-gram inclusion (explodes vocabulary size)
+7) I: infrequent word removal (e.g. in below 1 per cent of documents)
+
+
+## preText package 
+
+```{r pretext0, echo=TRUE, eval=TRUE}
+library(preText)
+```
+
+
+
+## preText package 
+Applied to the 2017 BTW election corpus of 7 manifestos: 
+
+```{r pretext1, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+df_btw17 <- readtext("M:/QTA Kurs CDSS/data/btw2017", encoding="UTF-8-BOM")
+corpus_btw17 <- corpus(df_btw17)
+summary(corpus_btw17)
+```
+
+## preText package 
+- This step calculates possible pre-processing specifications (here 64)
+- n-grams are not used to simplify 
+- `infrequent_term_threshold = 0.2` implies that features appearing in less than 20% of docs are excluded  
+
+```{r pretext2, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+preprocessed_documents <- factorial_preprocessing(
+    corpus_btw17,
+    use_ngrams = FALSE,
+    infrequent_term_threshold = 0.2,
+    verbose = FALSE)
+```
+
+
+## preText package 
+This is an overview of the combinations: 
+```{r pretext3, echo=TRUE, eval=TRUE}
+head(preprocessed_documents$choices)
+```
+
+
+
+## preText package 
+A regression of preText scores ("usualness") on pre-processing decisions: 
+```{r pretext4, echo=TRUE, eval=FALSE}
+preText_results <- preText(
+    preprocessed_documents,
+    dataset_name = "BTW 2017",
+    distance_method = "cosine",
+    num_comparisons = 10,
+    verbose = FALSE)
+```
+
+
+## preText package 
+A regression of preText scores ("usualness") on pre-processing decisions: 
+```{r pretext4b, echo=FALSE, eval=TRUE}
+preText_results <- preText(
+    preprocessed_documents,
+    dataset_name = "BTW 2017",
+    distance_method = "cosine",
+    num_comparisons = 10,
+    verbose = FALSE)
+```
+
+
+## preText package 
+Graphical regression results (negative indicates less risk): 
+```{r pretext5, echo=TRUE, eval=FALSE}
+regression_coefficient_plot(preText_results,
+                            remove_intercept = TRUE)
+```
+
+
+## preText package 
+Graphical regression results (negative indicates less risk): 
+```{r pretext5b, echo=FALSE, eval=TRUE}
+regression_coefficient_plot(preText_results,
+                            remove_intercept = TRUE)
+```
+
+
+## preText package 
+preText scores indicating the "risk" (change from "usual"/average rank order change) involved in pre-processing specifications (weigh theory against it): 
+```{r pretext6, echo=TRUE, eval=FALSE}
+preText_score_plot(preText_results)
+```
+
+
+## preText package 
+```{r pretext6b, echo=FALSE, eval=TRUE}
+preText_score_plot(preText_results)
+```
+
+
+# Encodings, or UTF-8 4ever 
+
+## On encodings 
+*See 2003 [blog post](https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses) by Joel Spolsky (CEO Stack Overflow)*
+
+*"There Ain't No Such Thing As Plain Text"*
+
+- ASCII (American Standard Code for Information Interchange): characters 0-127 stored in 7 bits $\rightarrow$ A = 01000001 
+- OEM: customized characters for slots 128-255 using bit nr. 8 $\rightarrow$ ANSI
+- Unicode: magic numbers/code points for platonic letters $\rightarrow$ A = U+0041
+- UTF-8: ASCII for slots 0-127, more bytes bytes above 
+- UTF-8-BOM: just adds an UTF-8 identifier at the start of the document  
+
+
+## ASCII code 
+- "And all was good, assuming you were an English speaker."
+- "represent every character using a number between 32 and 127" (Spolsky)
+
+
+## ASCII code 
+![USASCII](M:/QTA Kurs CDSS/pics/USASCII_code_chart.png)
+
+
+## Unicode 
+- Unicode Consortium deciding on coding of characters 
+- Magic numbers like U+0041
+- Requires encoding (storage in bytes), issues with low- and high-endian 
+- Implemented by character encodings such as UTF-8 
+
+
+## UTF-8
+- Dominant in the WWW 
+- Equals ASCII in code points 0-127 
+- "In UTF-8, every code point from 0-127 is stored in a single byte. Only code points 128 and above are stored using 2, 3, in fact, up to 6 bytes."
+- "nice property of also working respectably if you have the happy coincidence of English text and braindead programs that are completely unaware that there is anything other than ASCII."
+
+
+## Encodings in quanteda
+See [tutorial](https://tutorials.quanteda.io/import-data/encoding/), which features diversely encoded texts: 
+
+```{r encoding1, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+path_temp <- tempdir()
+unzip(system.file("extdata", "data_files_encodedtexts.zip", 
+                  package = "readtext"), exdir = path_temp)
+filename <- list.files(path_temp, "^(Indian|UDHR_).*\\.txt$")
+head(filename)
+```
+
+
+## Encodings in quanteda
+This just extracts the encoding from the file names: 
+```{r encoding2, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+filename <- gsub(".txt$", "", filename)
+encoding <- sapply(strsplit(filename, "_"), "[", 3)
+head(encoding)
+```
+
+
+## Encodings in quanteda
+Problematic encodings: 
+```{r encoding3, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+setdiff(encoding, iconvlist())
+```
+
+## Encodings in quanteda
+Specifying encodings to ensure conversion to UTF-8: 
+```{r encoding4, echo=TRUE, eval=FALSE, warnings=FALSE, comment=FALSE}
+path_data <- system.file("extdata/", package = "readtext")
+dat_txt <- readtext(paste0(path_data, "/data_files_encodedtexts.zip"), 
+                     encoding = encoding,
+                     docvarsfrom = "filenames", 
+                     docvarnames = c("document", "language", 
+                                     "input_encoding"))
+print(dat_txt, n = 5)
+```
+
+
+## Encodings in quanteda
+Specifying encodings to ensure conversion to UTF-8: 
+```{r encoding4b, echo=FALSE, eval=TRUE, warnings=FALSE, comment=FALSE}
+path_data <- system.file("extdata/", package = "readtext")
+dat_txt <- readtext(paste0(path_data, "/data_files_encodedtexts.zip"), 
+                     encoding = encoding,
+                     docvarsfrom = "filenames", 
+                     docvarnames = c("document", "language", "input_encoding"))
+print(dat_txt, n = 5)
+```
+
+
+## readtext() detect likely encoding
+```{r read_enc, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+encoding(df_btw17)
+```
+
+
+
+# Regex and text cleaning: A Brexit debate in the Bundestag 
+
+## Regex 
+- A sequence of characters that define a search pattern
+- Used in programming, developed in theoretical computer science 
+- Well-known example: \* for wildcard
+- We'll only scratch the surface 
+
+[Cheat Sheet](https://www.rstudio.com/wp-content/uploads/2016/09/RegExCheatsheet.pdf)
+
+
+## Context of Bundestag debate 
+- January 17, 2019 
+- Shortly after Westminster voted down one of the May EU Agreements (January 15)
+- Debate and vote on government proposal "Brexit-Übergangsgesetz"
+- 12 Speakers (4 CDU/CSU, 2 SPD, 2 AfD, 1 Greens, 1 Left, 1 FDP)
+- Proposal of the government accepted with only the AfD opposing 
+
+
+## Issues for text cleaning 
+- Goal: retrieve speeches by single politicians 
+- Interrupted by chair of session, questions, comments, applause... 
+
+
+## One way: using tags 
+- Prepared (manual work!) document "bundestag_19074_brexit_speakers.txt" with tags like ##MAAS or ##CHAIR.
+- Split up speech into speakers using tags 
+
+$\rightarrow$ 31 pieces of speech by individuals 
+
+```{r brexit_tags, echo=TRUE, eval=FALSE}
+df_brexit <- readtext("M:/DVPW Blog/bundestag_19074_brexit_speakers.txt",
+                      encoding="UTF-8")
+corpus_brexit <- corpus(df_brexit)
+corp_seg <- corpus_segment(corpus_brexit, pattern = "##*")
+head(summary(corp_seg))
+```
+
+
+## One way: using tags 
+- Prepared (manual work!) document "bundestag_19074_brexit_speakers.txt" with tags like ##MAAS or ##CHAIR.
+- Split up speech into speakers using tags 
+
+$\rightarrow$ 31 pieces of speech by individuals 
+
+```{r brexit_tagsb, echo=FALSE, eval=TRUE}
+df_brexit <- readtext("M:/DVPW Blog/bundestag_19074_brexit_speakers.txt",
+                      encoding="UTF-8")
+corpus_brexit <- corpus(df_brexit)
+corp_seg <- corpus_segment(corpus_brexit, pattern = "##*")
+head(summary(corp_seg))
+```
+
+
+## Tags 
+First text is the introcutory statement by the chair, Thomas Oppermann: 
+```{r brexit_tags2, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+texts(corp_seg)[1]
+```
+
+
+## More sophisticated: using regex 
+Original "bundestag 19074 brexit.txt" of the debate: 
+```{r brexit_regex, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+df_brexit_full <- readtext("M:/DVPW Blog/bundestag 19074 brexit.txt",
+                           encoding="UTF-8")
+```
+
+## Using regex 
+Removing everything in brackets: 
+```{r brexit_regex2, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+brexit_sub <- gsub( " *\\(.*?\\) *", "", df_brexit_full$text)
+```
+
+In words: Lazily (?) remove ("") everything (*) from x in non-empty (.) brackets (\\ needed as brackets are also meta-characters) surrounded by text (\*\*). 
+
+See [stackoverflow](https://stackoverflow.com/questions/23966678/remove-all-text-between-two-brackets).
+
+
+## Using regex 
+- Trying to split up speeches using the not-so regex "Herr Präsident" used to start speeches
+- Last entry is too long $\rightarrow$ Claudia Roth took over, who is "Präsidentin", not "Präsident" 
+
+```{r brexit_regex3, echo=TRUE, eval=FALSE}
+corpus_brexit_full <- corpus(brexit_sub)
+corp_brexit_split1 <- corpus_segment(corpus_brexit_full,
+                                     pattern = "Herr Präsident",
+                            valuetype = "regex")
+head(summary(corp_brexit_split1))
+```
+
+
+## Using regex 
+- Trying to split up speeches using the not-so regex "Herr Präsident" used to start speeches
+- Last entry is too long $\rightarrow$ Claudia Roth took over, who is "Präsidentin", not "Präsident" 
+
+```{r brexit_regex3b, echo=FALSE, eval=TRUE}
+corpus_brexit_full <- corpus(brexit_sub)
+corp_brexit_split1 <- corpus_segment(corpus_brexit_full, 
+                          pattern = "Herr Präsident",
+                          valuetype = "regex")
+head(summary(corp_brexit_split1))
+```
+
+
+## Using regex 
+- Trying to split up speeches using simple regex for "Herr Präsident" oder "Frau Präsidentin" - Still does not separate out some comments by the chair (end of texts) 
+
+```{r brexit_regex4, echo=TRUE, eval=TRUE, warnings=FALSE, comment=FALSE}
+corp_brexit_split2 <- corpus_segment(corpus_brexit_full, 
+                                    pattern = "(Herr|Frau) Präsident*",
+                                    valuetype = "regex")
+tail(summary(corp_brexit_split2))
+```
+
+
+## Using regex 
+Trying to split up speeches using simple regex for "Herr Präsident" oder "Frau Präsidentin" - Still does not separate out some comments by the chair (end of texts) 
+
+```{r brexit_regex4b, echo=TRUE, eval=FALSE}
+corp_brexit_split2 <- corpus_segment(corpus_brexit_full, 
+                                    pattern = "(Herr|Frau) Präsident*",
+                                    valuetype = "regex")
+tail(summary(corp_brexit_split2))
+```
+
+
+## Using regex 
+- Improved version alternatively finding pattern "Vizepräsident*" 
+- Still causes problems with "Zwischenfragen" $\rightarrow$ places where "Vizepräsident" has more than 2 sentences..
+
+```{r brexit_regex5, echo=FALSE, eval=TRUE}
+corp_brexit_split3 <- corpus_segment(corpus_brexit_full, 
+                                     pattern = "((Herr|Frau) Präsident*|Vizepräsident*)",
+                                     valuetype = "regex")
+head(summary(corp_brexit_split3))
+```
+
+
+## Using regex 
+- Improved version alternatively finding pattern "Vizepräsident*" 
+- Still causes problems with "Zwischenfragen" $\rightarrow$ places where "Vizepräsident" has more than 2 sentences..
+
+```{r brexit_regex5b, echo=FALSE, eval=TRUE}
+corp_brexit_split3 <- corpus_segment(corpus_brexit_full, 
+                          pattern = "((Herr|Frau) Präsident*|Vizepräsident*)",
+                          valuetype = "regex")
+head(summary(corp_brexit_split3))
+```
+
+
+
+## Further processing 
+Now, we can exclude the text with pattern "Vizepräsident*"
+
+```{r brex_ana, echo=TRUE, eval=TRUE}
+corp_brex_ana <- corpus_subset(corp_brexit_split3, pattern!="Vizepräsident")
+head(summary(corp_brex_ana))
+```
+
+
+## Some preparations 
+docvars 
+```{r brexit_docvars, echo=TRUE, eval=TRUE}
+docvars(corp_brex_ana, "speaker") <- c("Maas","Hebner","Leikert",
+                                       "Lambsdorff","Dehm","Brantner",
+                                       "Töns","Weyel","Hahn","Hacker",
+                                       "Seif","Hirte")
+docvars(corp_brex_ana, "afd") <- c("Other","AfD","Other","Other",
+                                   "Other","Other","Other","AfD",
+                                   "Other","Other","Other","Other")
+docvars(corp_brex_ana, "party") <- c("SPD","AfD","CDU/CSU","FDP","Linke",
+                                     "Grüne","SPD","AfD","CDU/CSU",
+                                     "FDP","CDU/CSU","CDU/CSU")
+# head(summary(corp_brex_ana))
+```
+
+
+## dfm AfD vs. rest 
+```{r cloud, echo=TRUE, eval=TRUE}
+afd_rest_dfm <- dfm(corpus_subset(corp_brex_ana, afd %in% 
+                                    c("AfD", "Other")),
+      remove = c(stopwords("german"),"dass","000","90", 
+                 "herr*", "damen", "kolleg*"),
+      remove_punct = TRUE, groups = "afd") %>%
+      dfm_trim(min_termfreq = 3)
+```
+
+
+## Word cloud AfD vs. rest 
+
+```{r cloud2, echo=TRUE, eval=FALSE}
+textplot_wordcloud(afd_rest_dfm, comparison = TRUE, max_words = 100, 
+                   color = c("blue", "red"))
+```
+
+
+## Word cloud AfD vs. rest 
+
+```{r cloud2b, echo=FALSE, eval=TRUE, warnings=FALSE, comment=FALSE}
+textplot_wordcloud(afd_rest_dfm, comparison = TRUE, max_words = 100, 
+                   color = c("blue", "red"))
+```
+
+
+## Relative word frequencies per party 
+```{r frequs, echo=TRUE, eval=FALSE}
+# library(tidyverse)
+brexit_dfm <- dfm(corp_brex_ana, remove = c(stopwords("german"),"dass","000","90", "herr*", "damen", "kolleg*"), remove_punct = TRUE) %>%
+  dfm_trim(min_termfreq = 3)
+wfreq_dfm <- brexit_dfm %>%
+  dfm_group(groups = "party") %>%
+  dfm_weight(scheme = "prop")
+relfreq <- textstat_frequency(wfreq_dfm, n = 10,
+                              groups = "party")
+ggplot(data = relfreq, aes(x = nrow(relfreq):1, y = frequency)) +
+  geom_point() +
+  facet_wrap(~ group, scales = "free") +
+  coord_flip() +
+  scale_x_continuous(breaks = nrow(relfreq):1,
+                     labels = relfreq$feature) +
+  labs(x = NULL, y = "Relative Frequency")
+```
+
+
+## Relative word frequencies per party 
+```{r frequsb, echo=FALSE, eval=TRUE}
+# library(tidyverse)
+brexit_dfm <- dfm(corp_brex_ana, remove = c(stopwords("german"),"dass","000","90", "herr*", "damen", "kolleg*"), remove_punct = TRUE) %>%
+  dfm_trim(min_termfreq = 3)
+
+wfreq_dfm <- brexit_dfm %>%
+  dfm_group(groups = "party") %>%
+  dfm_weight(scheme = "prop")
+
+relfreq <- textstat_frequency(wfreq_dfm, n = 10,
+                              groups = "party")
+ggplot(data = relfreq, aes(x = nrow(relfreq):1, y = frequency)) +
+  geom_point() +
+  facet_wrap(~ group, scales = "free") +
+  coord_flip() +
+  scale_x_continuous(breaks = nrow(relfreq):1,
+                     labels = relfreq$feature) +
+  labs(x = NULL, y = "Relative Frequency")
+
+```
+
+
+## Conclusions 
+- preText might be worth it for pre-processing 
+- Encodings are annoying but there's UTF-8 
+- Regex is open-ended 
+- THX! 
+
+
