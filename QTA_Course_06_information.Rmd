@@ -473,7 +473,7 @@ ggplot(plot_sim, aes(x = sim, y = dist)) +
 
 
 ## textstat_lexdiv()
-"[C]alculates the lexical diversity of documents using a variety of indices""
+"[C]alculates the lexical diversity of documents using a variety of indices"
 
 Regular indices: 
 
@@ -492,7 +492,7 @@ lexdiv1
 
 
 ## BTW 2017 
-Yule's K: more complex formula based on TTR but adjusting for text length, changes finding $\rightarrow$ AfD loses (shorter text)!
+Yule's K: more complex formula based on TTR but adjusting for text length $\rightarrow$ AfD still wins!
 ```{r lexdiv2, echo=TRUE}
 lexdiv2 <- textstat_lexdiv(dfm_btw, measure = "K")
 lexdiv2
@@ -514,7 +514,7 @@ My other favourites:
 
 ## Readability of manifestos 
 - Input has to be a corpus! 
-- Higher values imply less readability 
+- Higher values imply less readability (longer sentences and words)
 ```{r read1, echo=TRUE}
 read1 <- textstat_readability(corpus_btw17, measure = "ARI")
 read1
@@ -531,7 +531,7 @@ read2
 ## Lexical diversity and readability 
 
 ```{r div_read, echo=TRUE, eval=FALSE}
-div <- lexdiv2$K
+div <- lexdiv1$TTR
 read <- read1$ARI 
 plot_lex <- data.frame(div,read, party)
 ggplot(plot_lex, aes(x = div, y = read, label = party)) +
@@ -544,12 +544,12 @@ ggplot(plot_lex, aes(x = div, y = read, label = party)) +
 ## Lexical diversity and readability 
 
 ```{r div_read2, echo=FALSE}
-div <- lexdiv2$K
+div <- lexdiv1$TTR
 read <- read1$ARI 
 plot_lex <- data.frame(div,read, party)
 ggplot(plot_lex, aes(x = div, y = read, label = party)) +
   geom_point() +
-  labs(x = "Lexical Diversity (K)", y = "Readability (ARI)") +
+  labs(x = "More Lexical Diversity (K)", y = "Less Readability (ARI)") +
   geom_text(aes(label=party),hjust=-0.1, vjust=-0.1)
 ```
 
