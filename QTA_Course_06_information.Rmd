@@ -1,0 +1,574 @@
+---
+title: "QTA with R: Extracting Information from Text"
+author: "Julian Bernauer"
+date: "25 March 2019"
+output: 
+  ioslides_presentation:
+    incremental: false
+    widescreen: false 
+    smaller: false 
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(readtext)
+library(quanteda)
+library(ggplot2)
+df_btw17 <- readtext("M:/QTA Kurs CDSS/data/btw2017", encoding="UTF-8-BOM")
+corpus_btw17 <- corpus(df_btw17)
+docvars(corpus_btw17, "party") <- 
+  c("Grüne","Linke","SPD","FDP","CDU","CSU","AfD")
+docvars(corpus_btw17, "length") <- ntoken(corpus_btw17)
+df_taxi <- readtext("M:/QTA Kurs CDSS/data/taxidriver.txt", encoding="UTF-8")
+df_brexit <- readtext("M:/DVPW Blog/bundestag_19074_brexit_speakers.txt",
+                      encoding="UTF-8")
+load("M:/QTA Kurs CDSS/data/verena kunz eu speeches sample/speeches_ep6_cleaned.RData")
+```
+
+
+## Agenda
+1. Some definitions and the QTA workflow 
+
+2. Extracting information
+- Dictionaries and sentiment 
+- Similarity and distance between texts 
+- Lexical diversity and readability 
+
+
+# Some definitions and the QTA workflow 
+
+## Overview  
+- Data frame (df)
+- Corpus 
+- Tokens 
+- Document-feature matrix (dfm)
+
+See [quanteda](https://tutorials.quanteda.io/basic-operations/workflow/) for workflow details 
+
+
+## Data frame 
+
+`?data.frame`: 
+
+- "a list of variables of the same number of rows with unique row names"
+- "tightly coupled collections of variables which share many of the properties of matrices and of lists"
+- "a matrix-like structure whose columns may be of differing types (numeric, logical, factor and character and so on)"
+
+
+## Corpus 
+"Saves character strings and variables in a data frame"
+
+- It's a special case of a data frame with additional document-level variables $\rightarrow$ starting point for many quanteda commands 
+- By the way, a tibble is also a special case of a data frame with some adjustments (no strings-as-factors, summary default...)
+
+
+## Tokens 
+- "Stores tokens in a list of vectors"
+- Keeps positions of words 
+- A "token" is a string with an identified meaning, e.g. a word or sentence 
+
+From `tokens()` on *quanteda.io*: 
+
+- "most of the time, users will construct dfm objects from texts or a corpus, without calling tokens() as an intermediate step." 
+- "nothing is removed by default from the text being tokenized"
+
+
+## Document-feature matrix (dfm)
+"Represents frequencies of features in documents in a matrix"
+
+- Most efficient variant 
+- Bag-of-words, no more positions 
+- If you use `dfm()` on a character string, quanteda internally generates a corpus and tokenizes the text 
+
+"We call them "features" rather than terms, because features are more general than terms: they can be defined as raw terms, stemmed terms, the parts of speech of terms, terms after stopwords have been removed, or a dictionary class to which a term belongs."
+
+
+## Silge and Robinson (2017: Chapter 5)
+
+![Workflow tidytext](M:/QTA Kurs CDSS/pics/flow.png)
+
+
+
+## [Quanteda](https://tutorials.quanteda.io/basic-operations/workflow/)
+
+![Workflow quanteda](M:/QTA Kurs CDSS/pics/flow_quanteda.png)
+
+
+
+
+## When should I pre-process the text? 
+- Before the corpus, readtext produces a simple data frame with texts and names $\rightarrow$ Here I would perform the heavy-duty text cleaning such as removing text which is not from the speaker in speeches using regex 
+- The corpus should remain unchanged $\rightarrow$ access to text could be forced by `texts(CORPUS)[NUMBER]`, but "[y]ou are strongly encouraged as a good practice of text analysis workflow not to modify the substance of the texts in a corpus"
+- Tokenization retains the positions of words $\rightarrow$ allows for some positional operations, `tokens()` offers the option to apply regex 
+- `dfm()` allows for all kinds of reduction of the text (stopword removal...) $\rightarrow$ but not positional 
+
+
+## When should I pre-process the text? 
+$\Rightarrow$ Keeping within the logic of starting from an unaltered corpus, I suggest you pre-process text either at the level of raw input (if positions are required) or directly at the dfm level (if positions are not required), but there is also the option to do something like `corpus_trim()` to remove short sentences from a corpus...
+
+
+## Example of pre-processing workflow 
+Using regex on text in a simple data frame for heavy-lifting on "Sollen die Briten etwa an der Europawahl nicht teilnehmen, aber danach ein Referendum durchführen und in der Folge doch in der Europäischen Union bleiben? (Dr. Franziska Brantner [BÜNDNIS 90/DIE GRÜNEN]: Das geht ja gar nicht!)"
+
+```{r prepro1, echo=TRUE}
+text <- "Sollen die Briten etwa an der Europawahl nicht teilnehmen, 
+aber danach ein Referendum durchführen und in der Folge doch in der 
+Europäischen Union bleiben? (Dr. Franziska Brantner [BÜNDNIS 90/DIE 
+GRÜNEN]: Das geht ja gar nicht!)" 
+text_trim <- gsub("\\(.*?\\)", "", text)
+text_trim
+```
+
+
+## Example of pre-processing workflow 
+Removing punctuation and working with regex at the token level, also across tokens (more than 3?)  
+```{r prepro2, echo=TRUE, collapse=TRUE}
+corpus_text <- corpus(text_trim)
+# summary(corpus_text)
+tokens_text <- tokens(corpus_text, remove_punct = TRUE) 
+# tokens_text
+pat = "Europ* Union"
+tokens_text_trim <- tokens_remove(tokens_text, pattern = phrase(pat), 
+                                   valuetype= "regex") 
+tokens_text_trim
+```
+
+
+## Example of pre-processing workflow 
+Going from tokens to a dfm, removing stopwords $\rightarrow$ these are a user-supplied list of features 
+```{r prepro3, echo=TRUE}
+dfm_text <- dfm(tokens_text_trim, remove = stopwords("german"))
+head(dfm_text)
+```
+
+
+
+# Extracting Information 
+
+## Where are we 
+
+$\Rightarrow$ Information extraction here means everything between pre-processing and before more complex analytical models such as scaling or classification 
+
+
+## Some information extraction with R/quanteda:
+- Dictionaries $\rightarrow$ dictionary()
+- Sentiment analysis $\rightarrow$ special case of dictionaries 
+- Similarity between documents $\rightarrow$ textstat_simil() and textstat_dist()
+- Lexical diversity/language complexity $\rightarrow$ textstat_lexdiv(), textstat_readability()
+
+
+
+
+## Some information extraction with R/quanteda:
+Mentions: 
+
+- Collocations $\rightarrow$ textstat_collocations() identifies and scores multi-word expressions (United States Congress...)
+- Keyness $\rightarrow$ textstat_keyness(), textplot_keyness() provides stats for word occurrence in texts 
+- Semantic networks (co-occurence of features) $\rightarrow$ visualization session 
+
+
+
+# A populism dictionary 
+
+## [Rooduijn and Pauwels (2011, WEP)](https://www.tandfonline.com/doi/abs/10.1080/01402382.2011.616665) populism dictionary 
+- Earlier attempt of measuring populism quantitatively 
+- Share of *words* from self-deviced populism dictionaries in manifestos
+- One for each language 
+
+Comparison to manual coding of *paragraphs*: 
+
+- People-centrims: reference to the people? 
+- Anti-elitism: Critique towards elites? 
+
+
+## Dictionary in quanteda 
+German original Rooduijn and Pauwels (2011) $\rightarrow$ discuss appropriateness 
+```{r dict1, echo=TRUE, evaluate=TRUE}
+pop_dict_deu <- dictionary(list(
+  populism = c("elit*","konsens*","undemokratisch*","referend*","korrupt*",
+               "propagand*","politiker*","täusch*","betrüg*","betrug*",
+               "*verrat*","scham*","schäm*","skandal*","*wahrheit*",
+               "unfair*","unehrlich*","establishm*","*herrsch*","lüge*") 
+))
+pop_dict_deu 
+```
+
+
+## Rooduijn and Pauwels (2011)
+
+![Comparing dictionary share and hancoding](M:/QTA Kurs CDSS/pics/rooduijn_pauwels.png)
+
+
+
+
+## Dictionary in quanteda 
+Apply a dictionary to a corpus while creating a dfm (you could also use `dfm_lookup()` to apply a dictionary on a dfm):
+
+```{r dict2, echo=TRUE, evaluate=TRUE}
+dfm_btw_pop <- dfm(corpus_btw17, dictionary=pop_dict_deu, remove = stopwords("german"), remove_punct=TRUE)
+dfm_btw_pop
+```
+
+
+## Dictionary in quanteda 
+Share of "populist" words 
+
+```{r dict3, echo=TRUE}
+relpop <- as.numeric((dfm_btw_pop[,"populism"])/ntoken(corpus_btw17))*100
+relpop <- round(relpop, digits = 3)
+relpop
+```
+
+
+
+## Dictionary in quanteda 
+Display share of "populist" words
+
+```{r dict4, echo=TRUE, eval=FALSE}
+party <- as.character(docvars(dfm_btw_pop, "party"))
+plot_pop <- data.frame(relpop,party)
+ggplot(plot_pop, aes(x = reorder(party, relpop), y = relpop)) +
+  geom_point() +
+  coord_flip() + 
+  labs(x = "Party", y = "Relative Populist Rhetoric (Per Cent Non-Stop-Words)")
+```
+
+
+## Dictionary in quanteda 
+Display share of "populist" words
+
+```{r dict4b, echo=FALSE}
+party <- as.character(docvars(dfm_btw_pop, "party"))
+plot_pop <- data.frame(relpop,party)
+ggplot(plot_pop, aes(x = reorder(party, relpop), y = relpop)) +
+  geom_point() +
+  coord_flip() + 
+  labs(x = "Party", y = "Relative Populist Rhetoric (Per Cent Non-Stop-Words)")
+```
+
+
+## Exercise 
+
+*Improve the dictionary (additional words, exclude words, potentially subcategories) and compare the results, see exercise code* 
+
+
+*Please e-mail me your dictionaries!*
+
+
+# Sentiment Analysis 
+
+## Definition / idea 
+- The emotional content of text, e.g. positive/negative (Silge and Robinson 2017: Chapter 2)
+- Can be performed using dictionaries: proportion of positive words minus the proportion of negative words
+
+
+## Sentiment dictionaries: LSD
+- [Lexicoder Sentiment Dictionary](http://www.lexicoder.com/) (LSD) implemented in [quanteda](https://quanteda.io/reference/data_dictionary_LSD2015.html)
+- Used in [Young and Soroka (2012, Political Communication)](https://www.tandfonline.com/doi/abs/10.1080/10584609.2012.671234)
+- 2858 negative and 1709 positive sentiment words
+- "broad lexicon scored for positive and negative tone and tailored primarily to political texts" (Young and Soroka 2012)
+- Merges other dictionaries with little overlap 
+- English! $\rightarrow$ little warning if you apply it to another language 
+- quanteda [tutorial](https://tutorials.quanteda.io/advanced-operations/targeted-dictionary-analysis)
+
+
+## Potential issues 
+- bag-of-words-assumption
+- negation $\rightarrow$ included in dictionary 
+- weight of words ("evil" vs. "bad")
+- homographs: "lie" $\rightarrow$ only dictionary entry "lie to"
+- Also use pre-processing to remove "good bye...", truncation
+- "And there is, of course, no substitute for careful data interpretation"
+
+
+## German sentiment 
+- [SentiWS](http://wortschatz.uni-leipzig.de/de/download)
+- Extension in quanteda: [Rauh](https://rdrr.io/github/kbenoit/quanteda.dictionaries/man/data_dictionary_Rauh.html)
+
+
+## Young and Soroka (2012)
+- Study sentiment (net tone = pos.-neg.) in newspaper articles with Lexicoder 
+- Application to media tone and vote intention (Canada)
+
+Validation: 
+
+- Comparison across dictionaries 
+- Comparison with human coding 
+
+
+## Lexicoder example 
+```{r lexicoder simple, echo=TRUE, eval=TRUE, collapse=TRUE}
+txt <- "We will not destroy our strong and beautiful enemies."
+tokens_lookup(tokens(txt), dictionary = data_dictionary_LSD2015,
+              exclusive=FALSE)
+txt_sent <- dfm(txt, dictionary = data_dictionary_LSD2015)
+txt_sent
+```
+
+
+## Lexicoder example 
+Substract negations and calculate net tone: 
+```{r lexicoder simple2, echo=TRUE, eval=TRUE, collapse=TRUE}
+pos <- as.numeric(txt_sent[,"positive"]) - as.numeric(txt_sent[,"neg_positive"])
+neg <- as.numeric(txt_sent[,"negative"]) - as.numeric(txt_sent[,"neg_negative"])
+net_tone <- pos/ntoken(txt)-neg/ntoken(txt) 
+net_tone
+```
+
+
+
+## German example: manifestos
+Rauh
+
+```{r lexicoder btw, echo=TRUE, eval=TRUE, collapse=TRUE}
+# devtools::install_github("kbenoit/quanteda.dictionaries") 
+library("quanteda.dictionaries")
+btw_sent <- dfm(corpus_btw17, dictionary = data_dictionary_Rauh)
+pos <- as.numeric(btw_sent[,"positive"]) - as.numeric(txt_sent[,"neg_positive"])
+neg <- as.numeric(btw_sent[,"negative"]) - as.numeric(txt_sent[,"neg_negative"])
+tot <- ntoken(corpus_btw17)
+net_tone <- pos/tot-neg/tot 
+net_tone
+```
+
+
+## Plot
+```{r rauh btw plot, echo=TRUE, eval=FALSE}
+party <- as.character(docvars(corpus_btw17, "party"))
+plot_sent <- data.frame(net_tone,party)
+ggplot(plot_sent, aes(x = reorder(party, net_tone), y = net_tone)) +
+  geom_point() +
+  coord_flip() + 
+  labs(x = "Party", y = "Net Sentiment (Rauh)")
+```
+
+
+## Plot
+```{r rauh btw plot2, echo=FALSE}
+party <- as.character(docvars(corpus_btw17, "party"))
+plot_sent <- data.frame(net_tone,party)
+ggplot(plot_sent, aes(x = reorder(party, net_tone), y = net_tone)) +
+  geom_point() +
+  coord_flip() + 
+  labs(x = "Party", y = "Net Sentiment (Rauh)")
+```
+
+
+
+## Populism and sentiment 
+It's anti indeed! 
+```{r rauh pop sent, echo=TRUE, eval=FALSE}
+plot_pop <- data.frame(net_tone,relpop,party)
+ggplot(plot_pop, aes(x = relpop, y = net_tone)) +
+  geom_point() +
+  labs(x = "Relative Populist Rhetoric", y = "Net Sentiment (Rauh)") +
+  geom_text(aes(label=party),hjust=-0.1, vjust=-0.1)
+```
+
+
+## Populism and sentiment 
+It's anti indeed! 
+```{r rauh pop sent2, echo=FALSE}
+plot_pop <- data.frame(net_tone,relpop,party)
+ggplot(plot_pop, aes(x = relpop, y = net_tone)) +
+  geom_point() +
+  labs(x = "Relative Populist Rhetoric", y = "Net Sentiment (Rauh)") +
+  geom_text(aes(label=party),hjust=-0.1, vjust=-0.1)
+```
+
+
+## Taxi Driver   
+(Note how dfm includes tokenization:)
+
+```{r lexicoder taxi base, echo=TRUE, eval=TRUE}
+taxi_corp <- corpus(df_taxi)
+taxi_sent <- dfm(taxi_corp, dictionary = data_dictionary_LSD2015)
+taxi_sent
+```
+
+
+## Exercise Sentiment 
+
+*Get the [Lion King movie (1994) text](https://www.springfieldspringfield.co.uk/movie_script.php?movie=lion-king-the) and compare the sentiment to Taxi Driver*
+
+
+
+# Similarity between documents
+
+## Functions 
+
+`textstat_simil()`
+
+Variants 
+
+- correlation (default)
+- cosine (angle of vectors)
+- ... 
+
+
+`textstat_dist()`
+
+Variants 
+
+- euclidean (default)
+- manhattan (absolute distance)
+- ...
+
+
+## Definition
+
+"These functions compute matrixes of distances and similarities between documents or features from a dfm"
+
+
+## Similarity of Bundestag manifestos 
+
+```{r simil, echo=TRUE}
+dfm_btw <- dfm(corpus_btw17, remove_punct=TRUE,
+               remove = stopwords("german"))
+sim <- textstat_simil(dfm_btw, method = "cosine")
+sim
+```
+
+
+## Distance between Bundestag manifestos
+
+```{r dist, echo=TRUE}
+dist <- textstat_dist(dfm_btw, method = "euclidean")
+dist 
+```
+
+
+## Similarity and distance 
+
+```{r dist_sim, echo=TRUE, eval=FALSE, comment=FALSE}
+simvec <- as.numeric(sim)
+distvec <- as.numeric(dist) 
+plot_sim <- data.frame(simvec,distvec)
+ggplot(plot_sim, aes(x = sim, y = dist)) +
+  geom_point() +
+  labs(x = "Cosine Similarities (Pairwise)", y = "Euclidean Distances (Pairwise)")
+```
+
+
+## Similarity and distance 
+
+```{r dist_sim2, echo=FALSE}
+simvec <- as.numeric(sim)
+distvec <- as.numeric(dist) 
+plot_sim <- data.frame(simvec,distvec)
+ggplot(plot_sim, aes(x = sim, y = dist)) +
+  geom_point() +
+  labs(x = "Cosine Similarities (Pairwise)", y = "Euclidean Distances (Pairwise)")
+```
+
+
+
+# Lexical diversity/language complexity 
+
+## Functions in quanteda 
+- [textstat_lexdiv()](http://quanteda.io/reference/textstat_lexdiv.html)
+- [textstat_readability()](http://quanteda.io/reference/textstat_readability.html)
+
+
+## textstat_lexdiv()
+"[C]alculates the lexical diversity of documents using a variety of indices""
+
+Regular indices: 
+
+- TTR: The ordinary Type-Token Ratio  
+- Variants taking logs... 
+
+$\rightarrow$ TTR tends to be affected by text length 
+
+
+## BTW 2017 
+TTR: Higher values indicate more types per token, i.e. more diversity $\rightarrow$ AfD wins!
+```{r lexdiv, echo=TRUE}
+lexdiv1 <- textstat_lexdiv(dfm_btw, measure = "TTR")
+lexdiv1
+```
+
+
+## BTW 2017 
+Yule's K: more complex formula based on TTR but adjusting for text length, changes finding $\rightarrow$ AfD loses (shorter text)!
+```{r lexdiv2, echo=TRUE}
+lexdiv2 <- textstat_lexdiv(dfm_btw, measure = "K")
+lexdiv2
+```
+
+
+## textstat_readability()
+- Offers a huge selection of indices $\rightarrow$ decision guidance needed
+- Often based on average sentence length (ASL) and average word length (AWL)
+- Sometimes lists of "familiar" words
+- A regular index is ARI: Automated Readability Index $0.5 ASL + 4.71 AWL - 21.34$
+
+My other favourites: 
+
+- "Fucks' (1955) Stilcharakteristik" $ASL*AWL$
+- "Björnsson's (1968) Läsbarhetsindex" (for Swedish)
+- Mean scrabble score 
+
+
+## Readability of manifestos 
+- Input has to be a corpus! 
+- Higher values imply less readability 
+```{r read1, echo=TRUE}
+read1 <- textstat_readability(corpus_btw17, measure = "ARI")
+read1
+```
+
+
+## Readability of manifestos 
+```{r read2, echo=TRUE}
+read2 <- textstat_readability(corpus_btw17, measure = "Fucks")
+read2
+```
+
+
+## Lexical diversity and readability 
+
+```{r div_read, echo=TRUE, eval=FALSE}
+div <- lexdiv2$K
+read <- read1$ARI 
+plot_lex <- data.frame(div,read, party)
+ggplot(plot_lex, aes(x = div, y = read, label = party)) +
+  geom_point() +
+  labs(x = "Lexical Diversity (K)", y = "Readability (ARI)") +
+  geom_text(aes(label=party),hjust=-0.1, vjust=-0.1)
+```
+
+
+## Lexical diversity and readability 
+
+```{r div_read2, echo=FALSE}
+div <- lexdiv2$K
+read <- read1$ARI 
+plot_lex <- data.frame(div,read, party)
+ggplot(plot_lex, aes(x = div, y = read, label = party)) +
+  geom_point() +
+  labs(x = "Lexical Diversity (K)", y = "Readability (ARI)") +
+  geom_text(aes(label=party),hjust=-0.1, vjust=-0.1)
+```
+
+
+## Exercise: EU Speeches (Verena)
+Random sample of English texts: 
+```{r eu1, echo=TRUE, collapse=TRUE}
+corpus_eu <- corpus(speeches_ep6_cleaned, text_field = "textEN")
+corpus_eu_sample <- corpus_sample(corpus_eu, 100)
+head(summary(corpus_eu_sample))
+# saveRDS(corpus_eu_sample,"corpus_eu_sample.Rds")
+```
+
+
+## Exercise: EU Speeches (Verena)
+
+*Plot readability and lexical diversity against each other, with MPs as labels*  
+
+```{r eu2, echo=TRUE, collapse=TRUE}
+ndoc(corpus_eu_sample)
+names(docvars(corpus_eu))
+```
