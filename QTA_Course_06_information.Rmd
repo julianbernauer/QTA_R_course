@@ -549,7 +549,7 @@ read <- read1$ARI
 plot_lex <- data.frame(div,read, party)
 ggplot(plot_lex, aes(x = div, y = read, label = party)) +
   geom_point() +
-  labs(x = "More Lexical Diversity (K)", y = "Less Readability (ARI)") +
+  labs(x = "More Lexical Diversity (TTR)", y = "Less Readability (ARI)") +
   geom_text(aes(label=party),hjust=-0.1, vjust=-0.1)
 ```
 
