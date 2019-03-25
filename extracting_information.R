@@ -44,6 +44,7 @@ taxi_sent
 
 # Plot readability and lexical diversity against each other, with MPs as labels 
 
+corpus_eu_sample <- readRDS("C:/Users/Dr. J/Desktop/corpus_eu_sample.Rds")
 ndoc(corpus_eu_sample)
 names(docvars(corpus_eu_sample))
 
