@@ -1,0 +1,157 @@
+---
+title: "QTA with R: Twitter Data"
+author: "Julian Bernauer"
+date: "01 April 2019"
+output: 
+  ioslides_presentation:
+    incremental: false
+    widescreen: false 
+    smaller: false 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(readtext)
+library(quanteda)
+```
+
+## Agenda
+1. Introduction 
+2. Guest lecturer Marius Sältzer: Tweet Mining MdBs 
+3. Populism in Tweets by European politicians 
+
+
+# Introduction Twitter 
+
+
+## Workshop SSDL Simon Kühne
+- [Material (more to come)](https://github.com/SocialScienceDataLab/twitter)
+- Covers information on Twitter as such and its use in research 
+- Has examples for the use of rtweet, especially on real-time data and mapping geo-locations 
+- Discusses limitations: representativeness, replication, ethics 
+
+$\rightarrow$ Check it out 
+
+$\rightarrow$ I'll use a little more quanteda and go into Tweet texts  
+
+$\rightarrow$ Marius shows a full workflow of obtaining, cleaning and classifying/scaling Tweets by MdBs 
+
+
+## Why Twitter Data 
+- It's public 
+- It's used by politicians 
+- It has an useful API 
+- Facebook and Instagram shut-down down their APIs
+
+
+## Twitter's [developer terms](https://developer.twitter.com/en/developer-terms/more-on-restricted-use-cases)
+But there are also some reactions to Cambridge Analytica: 
+
+- "Never derive or infer, or store derived or inferred, information about a Twitter user's [...] Political affiliation or beliefs"
+- "If a user would be surprised to learn that you are using information they provided to link their Twitter account to an identity off of Twitter, don't do it."
+
+$\rightarrow$ Only affects the individual level? 
+
+Also interesting: "Do not use the Twitter APIs to measure the availability, performance, functionality, or usage of Twitter for benchmarking or competitive purposes."
+
+
+## Two Twitter applications in PolSci
+- Barberá, Pablo  (2015, Political Analysis): Ideal points from Twitter networks 
+- Hua et al. (2018, EPSA paper): Classifying Tweets in three dimensions of populism  
+
+
+## Barberá (2015)
+- Uses follower structures under the assumption that this implies ideological agreement 
+- Bayesian Spatial Following Model accounting for political interest and popularity   
+- Hundreds of politicians and millions of followers in six countries 
+
+
+## Barberá (2015) 
+
+![European Twitter estimates](U:/QTA Kurs CDSS/pics/barbera.png)
+
+
+## Hua et al. (2018)
+- Populism in three dimensions: anti-elite, pure people, exclusion 
+- Twitter and FB accounts of parties and party leaders in six countries 
+- Google Translate 
+- CrowdFlower labeled data set of 5k Tweets for training (80 per cent) and validation (20 per cent)
+- Classification based on training data set using xgboost/decision trees 
+- Extraction of n-grams with highest feature importance 
+- Scaling: share of populist Tweets 
+- Further analyses: over time, who uses populist rhetoric, are populist Tweets more viral 
+
+
+## Hua et al. (2018)
+
+![Share of populism in Tweets](U:/QTA Kurs CDSS/pics/hua.png)
+
+
+## How to handle Twitter data in R 
+1) Retrieve data using handles, hashtags or keywords, usually directly via API 
+2) Pre-process data, select features of interest $\rightarrow$ can be mentions, follower structures or retweets for network data and/or full text  
+3) Analyze/visualize: all things text or network (network plots, word frequencies, sentiment, complexity, dictionaries, classification, scaling based on text or network data...) 
+
+
+## API 
+- Application Programming Interface 
+- Provides access to data or features of an application or service 
+- "Programmierschnittstelle"
+
+
+## Twitter API
+- Streaming API: real-time, up to 400 keywords, 5000 users and 25 location boxes
+- You can also go back in time, limits apply (e.g. 1500 (rtweet says 18000) request every 15 minutes, last 3200 Tweets per account...)
+- Marius provides an approach to speed things up 
+- You can also pay for more... 
+
+
+## Some packages 
+- *rtweet*: API key not necessary, but allows more flexibility
+- *twitteR*: around for while
+- *streamR*: developed by Barberá
+
+$\rightarrow$ We'll use `rtweet` here 
+
+
+## rtweet 
+- [Information on rtweet](https://rtweet.info/)
+- Now [works with a simple Twitter account](https://github.com/mkearney/rtweet) using browser identification  
+- Or directly with the API: Get a developer account, create an app, and store the access token 
+- [Documentation](https://cran.r-project.org/web/packages/rtweet/rtweet.pdf) 
+
+
+## Some features we'll cover today 
+- `search_tweets()` to search for Tweets by keywords, hashtags or handles 
+- `get_timelines()` to get Tweets from a handle  
+- `stream_tweets()` to retrieve real-time Tweets 
+
+
+## Some further features of rtweet 
+- Get followers with `get_followers()`
+- Post Tweets with `post_tweet()`
+- Work with geo-location $\rightarrow$ see Simon Kühne's workshop 
+- Has its own Twitter stopword list: `stopwordslangs`
+- ...
+
+
+## Text processing and further analysis 
+
+*Our job!*
+
+
+##(Pre-)processing 
+- As usual, you could do (pre-)processing at different levels 
+- I will show a quanteda example $\rightarrow$ code 
+- Simon Kühne uses tidytext and base R with regex 
+- See Marius's code for more examples 
+
+
+# Appendix 
+
+
+## quanteda on URLs
+
+"URLs are tricky to tokenize, because they contain a number of symbols and punctuation characters. If you wish to remove these, as most people do, and your text contains URLs, then you should set what = "fasterword" and remove_url = TRUE. If you wish to keep the URLs, but do not want them mangled, then your options are more limited, since removing punctuation and symbols will also remove them from URLs. We are working on improving this behaviour."
+

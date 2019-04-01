@@ -1,0 +1,263 @@
+---
+title: "Twitter TEMPOP"
+author: "Julian Bernauer"
+date: "01 April 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readtext)
+library(quanteda)
+library(rtweet)
+library(quanteda.dictionaries)
+```
+
+## Populism in Tweets by European politicians 
+- Getting Tweets from party and politician accounts
+- Goal: Classifying and scaling text 
+- Here: Obtaining and cleaning Tweets and some basic analysis 
+
+
+## Research Questions Targeted 
+- Are alleged populists using the most populist rhetoric indeed? 
+- Is populist rhetoric more widespread on Twitter compared to manifestos?
+- Is language complexity lower in Tweets from populists? 
+
+
+## Why Twitter Data 
+- Less formal and controlled compared to manifestos 
+- Individual-level data $\rightarrow$ intra-party politics 
+- Limitations: short text, lots of noise 
+- But should be better for politicians 
+
+
+## The sample targeted 
+- Austria, France, Germany, Italy, Ireland, Spain, Switzerland and United Kingdom
+- Populist parties identified by experts on popu-list.org 
+- Party handles and handles of prominent party figures and MPs 
+- See [GitHub sample documentation](https://github.com/julianbernauer/QTA/blob/master/covfefe/sample.csv) (in process)
+- Challenge of language diversity $\rightarrow$ will be treated via translation or word embeddings 
+
+
+## Sample used here 
+- German Tweets from party accounts or prominent party figures 
+- Austria, Germany and Switzerland 
+- 12 party politicians from AfD, SVP and FPÖ and some mainstream parties 
+- Populist party figures active on Twitter: Alice Weidel (@Alice_Weidel), Heinz-Christian Strache (@HCStracheFP), Natalie Rickli (@NatalieRickli) 
+- Other German: CDU (@CDU), SPD (@AndreaNahlesSPD), Green (@ABaerbock) 
+- Other Austrian: ÖVP (@volkspartei), SPÖ (@SPOE_at), Green (@Gruene_Austria)
+- Other Swiss: CVP (@gerhardpfister), FDP (@FDP_Liberalen), SP (@spschweiz)
+
+
+## Data retrieval with rtweet 
+
+Without retweets 
+```{r DACH, echo=TRUE, evaluate = FALSE}
+tmls_dach <- get_timelines(c("alice_weidel", "HCStracheFP", "NatalieRickli", "CDU", "ABaerbock", "AndreaNahlesSPD","SPOE_at","Gruene_Austria","volkspartei","gerhardpfister","FDP_Liberalen","spschweiz"), n = 1000, include_rts = FALSE)
+save(tmls_dach,file="U:/dach.Rda")
+```
+
+Loading the data retrieved before: 
+```{r three_pops_load, echo=TRUE}
+load("U:/pops.Rda")
+```
+
+## Plot the frequency of tweets for each user over time
+
+```{r dach_plot, echo=TRUE}
+tmls_dach %>%
+  dplyr::filter(created_at > "2018-09-01") %>%
+  dplyr::group_by(screen_name) %>%
+  ts_plot("days", trim = 1L) +
+  ggplot2::geom_point() +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(
+    legend.title = ggplot2::element_blank(),
+    legend.position = "bottom",
+    plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Frequency of Twitter statuses posted on 13 DE/AT/CH accounts",
+    subtitle = "Twitter status (tweet) counts aggregated by day",
+    caption = "\nSource: Data collected from Twitter's REST API via rtweet"
+  )
+```
+
+
+## On to a corpus
+
+```{r dach_corp, echo=TRUE}
+tmlsdach_corpus <- corpus(tmls_dach)
+summary(tmlsdach_corpus)[1:10,1:8]
+```
+
+
+## Some processing and a dfm
+
+A Tweet: 
+```{r dach_example, echo=TRUE}
+texts(tmlsdach_corpus)[1]
+```
+
+
+All text: 
+```{r dach_proc, echo=TRUE}
+dach_toks <- tokens(tmlsdach_corpus, what = "word", remove_url = TRUE, remove_punct = TRUE, remove_twitter=TRUE)
+dach_toks[1]
+```
+
+
+A dfm with stopwords removed: 
+```{r dach_dfm, echo=TRUE}
+dach_dfm <- dfm(dach_toks, remove = c(stopwords("german"),"dass"))
+head(dach_dfm, 6, 6)
+```
+
+
+## Plotting some frequencies by politician 
+
+```{r plot_dach, echo=TRUE}
+
+handle <- docvars(dach_toks, "screen_name")
+
+dach_dfm_grouped <- dfm(dach_toks, remove = c(stopwords("german"), "dass", "amp"), groups = "screen_name")
+
+freq <- textstat_frequency(dach_dfm_grouped, n = 7, groups = docnames(dach_dfm_grouped))
+
+freq$relfreq <- (freq$frequency / ntoken(dfm(dach_toks, groups = "screen_name")))*100
+
+ggplot(data = freq, aes(x = nrow(freq):1, y = relfreq)) +
+  geom_point() +
+  facet_wrap(~ group, scales = "free") +
+  coord_flip() +
+  scale_x_continuous(breaks = nrow(freq):1,
+                     labels = freq$feature) +
+  labs(x = NULL, y = "Relative Frequency (Per Cent)")
+```
+
+
+## A populism dictionary 
+It's not perfect, but for a start... 
+```{r dict1, echo=TRUE, evaluate=TRUE}
+pop_dict_deu <- dictionary(list(
+  populism = c("elit*","konsens*","undemokratisch*","referend*","korrupt*",
+               "propagand*","politiker*","täusch*","betrüg*","betrug*",
+               "*verrat*","scham*","schäm*","skandal*","*wahrheit*",
+               "unfair*","unehrlich*","establishm*","*herrsch*","lüge*") 
+))
+```
+
+
+```{r dict2, echo=TRUE, evaluate=TRUE}
+popdict_dfm <- dfm(dach_toks, dictionary=pop_dict_deu, remove = stopwords("german"), remove_punct=TRUE, groups = "screen_name")
+popdict_dfm
+```
+
+
+Share of "populist" words as percentage of total words (including stopwords)
+
+```{r dict3, echo=TRUE}
+relpop <- as.numeric((popdict_dfm[,"populism"])/ntoken(dfm(dach_toks, groups = "screen_name")))*100
+relpop <- round(relpop, digits = 3)
+relpop
+```
+
+
+## Dictionary in quanteda 
+Display share of "populist" words
+
+```{r dict4, echo=TRUE, eval=FALSE}
+handle <- docnames(dach_dfm_grouped)
+plot_pop <- data.frame(relpop,handle)
+ggplot(plot_pop, aes(x = reorder(handle, relpop), y = relpop)) +
+  geom_point() +
+  coord_flip() + 
+  labs(x = "Handle", y = "Relative Populist Rhetoric (Per Cent Non-Stop-Words)")
+```
+
+
+
+
+## Sentiment 
+
+```{r sent}
+twitter_sent <- dfm(dach_toks, dictionary=data_dictionary_Rauh, remove = stopwords("german"), remove_punct=TRUE, groups = "screen_name")
+twitter_sent
+pos <- as.numeric(twitter_sent[,"positive"])
+neg <- as.numeric(twitter_sent[,"negative"])
+tot <- ntoken(dfm(dach_toks, remove = stopwords("german"), remove_punct=TRUE, groups = "screen_name"))
+net_tone <- pos/tot-neg/tot 
+net_tone
+```
+
+
+## Complexity 
+```{r lexi}
+twitter_lexdiv <- textstat_lexdiv(dfm(dach_toks, remove = stopwords("german"), remove_punct=TRUE, groups = "screen_name"), measure = "TTR")
+twitter_lexdiv
+```
+
+
+## Populism and Sentiment 
+```{r popsent}
+handle <- docnames(dach_dfm_grouped)
+plot_popsent <- data.frame(net_tone,relpop,handle)
+ggplot(plot_popsent, aes(x = relpop, y = net_tone)) +
+  geom_point() +
+  labs(x = "Relative Populist Rhetoric", y = "Net Sentiment (Rauh)") +
+  geom_text(aes(label=handle),hjust=.4, vjust=.4)
+```
+
+
+
+## Populism and Lexical Diversity 
+```{r poplex}
+plot_poplex <- data.frame(twitter_lexdiv,relpop,handle)
+ggplot(plot_poplex, aes(x = relpop, y = TTR)) +
+  geom_point() +
+  labs(x = "Relative Populist Rhetoric", y = "Lexical Diversity (TTR)") +
+  geom_text(aes(label=handle),hjust=.4, vjust=.4)
+```
+
+
+# Wordfish scaling 
+
+- theta = document position (that's what we want)
+- alpha = document fixed effect (accounts for text length)
+- beta = feature marginal effect (the "word weights" shaping the text positions)
+- psi = word fixed effect (accounts for absolut frequency) 
+
+Baerbock left, Weidel right 
+
+```{r wordfish, eval=FALSE, echo=TRUE}
+fish_twitt <- textmodel_wordfish(dach_dfm_grouped, dir = c(1,2)) 
+summary(fish_twitt, n = 5)
+```
+
+
+## wordfish visualization of text positions 
+
+```{r positions, eval=TRUE, echo=TRUE}
+fish_twitt <- textmodel_wordfish(dach_dfm_grouped, dir = c(1,2)) 
+textplot_scale1d(fish_twitt, doclabels = handle)
+```
+
+
+## wordfish visualization words
+
+```{r features, eval=TRUE, echo=TRUE}
+fish_twitt <- textmodel_wordfish(dach_dfm_grouped, dir = c(1,2)) 
+textplot_scale1d(fish_twitt, margin = "features", 
+                 highlighted = c("eliten","volk","souverän","deutschland","österreich","schweiz","migranten"))
+```
+
+
+# Outlook 
+- Better "populist" scaling 
+- Classification of Tweets -> training / validation set 
+- Word embeddings -> similarity to populist benchmark, allows classification or scaling 
+- Comparison to manifestos 
+- Validation strategy -> content of "populist" Tweets, validation set... 
+
